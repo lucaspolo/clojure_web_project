@@ -6,7 +6,7 @@
   (println x "Hello, World!"))
 
 (defn example-handler [request]
-  {:body "Hello Clojure! Reloaded."})
+  {:body (pr-str request)})
 
 (defn on-init []
   (println "Initializing sample webapp!"))

@@ -6,7 +6,7 @@
   (println x "Hello, World!"))
 
 (defn example-handler [request]
-  {:body (pr-str request)})
+  {:body (java.io.File. "test.txt")})
 
 (defn on-init []
   (println "Initializing sample webapp!"))

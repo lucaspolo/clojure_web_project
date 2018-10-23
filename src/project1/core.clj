@@ -1,4 +1,5 @@
-(ns project1.core)
+(ns project1.core
+  (:require [project1.handlers :as handlers]))
 
 (defn foo
   "I don't do a whole lot."
@@ -27,4 +28,5 @@
   (condp = (:uri request)
     "/test1" (test1-handler request)
     "/test2" (test2-handler request)
+    "/test3" (handlers/handler3 request)
     nil))

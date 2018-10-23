@@ -15,3 +15,16 @@
 
 (defn on-destroy []
   (println "Destroying sample webapp!"))
+
+(defn test1-handler [request]
+  {:body "Test1"})
+
+(defn test2-handler [request]
+  {:status 301
+   :headers {"Location" "http://github.com/lucaspolo"}})
+
+(defn route-handler [request]
+  (condp = (:uri request)
+    "/test1" (test1-handler request)
+    "/test2" (test2-handler request)
+    nil))

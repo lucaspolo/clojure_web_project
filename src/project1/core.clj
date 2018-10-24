@@ -1,6 +1,11 @@
 (ns project1.core
   (:require [project1.handlers :as handlers]))
 
+(defn simple-log-middleware [handler]
+  (fn [{:keys [uri] :as request}]
+    (println "Request path:" uri)
+    (handler request)))
+
 (defn foo
   "I don't do a whole lot."
   [x]
@@ -39,3 +44,6 @@
       {:status 404 :body (str "Not found: " (:uri request))})
   (catch Throwable e
     {:status 500 :body (apply str (interpose "\n" (.getStackTrace e)))})))
+
+(def full-handler
+  (simple-log-middleware wrapping-handler))

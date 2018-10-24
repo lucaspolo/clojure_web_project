@@ -1,5 +1,18 @@
 (ns project1.core
   (:require [project1.handlers :as handlers]))
+(defn not-found-middleware [handler]
+  (fn [request]
+    (or (handler request)
+      {:status 404 :body (str "404 Not found (with middleware): " (:uri request))})))
+
+(defn exception-middleware-fn [handler request]
+  (try (handler request)
+    (catch Throwable e
+      {:status 500 :body (apply str (interpose "\n" (.getStackTrace e)))})))
+
+(defn wrap-exception-middleware [handler]
+  (fn [request]
+    (exception-middleware-fn handler request)))
 
 (defn simple-log-middleware [handler]
   (fn [{:keys [uri] :as request}]
@@ -46,4 +59,7 @@
     {:status 500 :body (apply str (interpose "\n" (.getStackTrace e)))})))
 
 (def full-handler
-  (simple-log-middleware wrapping-handler))
+  (-> route-handler
+    not-found-middleware
+    wrap-exception-middleware
+    simple-log-middleware))

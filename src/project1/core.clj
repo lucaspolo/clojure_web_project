@@ -6,6 +6,8 @@
             [ring.middleware.keyword-params]
             [ring.middleware.multipart-params]
             [ring.middleware.cookies]
+            [ring.middleware.session]
+            [ring.middleware.session.memory]
             [project1.html :as html]
             [clojure.string]))
 
@@ -74,10 +76,21 @@
   {:body (layout [:div [:p "Cookies:"]
                  [:pre (:cookies request)]])})
 
+(defn session-handler [request]
+  {:body (layout [:div
+                    [:p "Session"]
+                    [:pre (:session request)]])})
+
+(defn logout-handler [request]
+  {:body "Logged out."
+   :session nil})
+
 (defn form-handler [request]
   {:status 200
    :headers {"Content-type" "text/html"}
    :cookies {:username (:login (:params request))}
+   :session {:username (:login (:params request))
+             :cnt (inc (or (:cnt (:session request)) 0))}
    :body (layout
           [:div
             [:p "Params: "]
@@ -94,11 +107,13 @@
 
 (defn route-handler [request]
   (condp = (:uri request)
-    "/test1" (test1-handler request)
-    "/test2" (test2-handler request)
-    "/test3" (handlers/handler3 request)
-    "/form" (form-handler request)
-    "/cookies" (cookie-handler request)
+    "/test1"    (test1-handler request)
+    "/test2"    (test2-handler request)
+    "/test3"    (handlers/handler3 request)
+    "/form"     (form-handler request)
+    "/cookies"  (cookie-handler request)
+    "/session"  (session-handler request)
+    "/logout"   (logout-handler request)
     nil))
 
 (defn wrapping-handler [request]
@@ -119,5 +134,11 @@
     ring.middleware.keyword-params/wrap-keyword-params
     ring.middleware.params/wrap-params
     ring.middleware.multipart-params/wrap-multipart-params
+    (ring.middleware.session/wrap-session
+      {:cookie-name "ring-session"
+       :root "/"
+       :cookie=attrs {:max-age 600
+                      :secure false}
+       :store (ring.middleware.session.memory/memory-store)})
     ring.middleware.cookies/wrap-cookies
     simple-log-middleware))

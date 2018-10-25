@@ -5,7 +5,16 @@
             [ring.middleware.params]
             [ring.middleware.keyword-params]
             [ring.middleware.multipart-params]
+            [project1.html :as html]
             [clojure.string]))
+
+(defn layout [contents]
+  (html/emit
+    [:html
+      [:body
+        [:h1 "Clojure webapps example"]
+        [:p "This content comes from layout function"]
+        contents]]))
 
 (defn case-middleware [handler request]
   (let [request (update-in request [:uri] clojure.string/lower-case)
@@ -62,12 +71,20 @@
 
 (defn form-handler [request]
   {:status 200
-   :headers {"Content-type" "text/plain"}
-   :body (str "Local path:\n" (.getAbsolutePath (get-in request [:params :file :tempfile]))
-              "\nMultipart-params:\n" (:multipart-params request)
-              "\nParams:\n" (:params request) 
-              "\nQuery-params:\n" (:query-params request) 
-              "\nForm-params:\n" (:form-params request))})
+   :headers {"Content-type" "text/html"}
+   :body (layout
+          [:div
+            [:p "Params: "]
+            [:pre (:params request)]
+            [:p "Query string params"]
+            [:pre (:query-params request)]
+            [:p "Form params: "]
+            [:pre (:form-params request)]
+            [:p "Multipart-params: "]
+            [:pre (:multipart-params request)]
+            [:p "Local path: "]
+            [:pre (when-let [f (get-in request [:params :file :tempfile])]
+                    (.getAbsolutePath f))]])})
 
 (defn route-handler [request]
   (condp = (:uri request)

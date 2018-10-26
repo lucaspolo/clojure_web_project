@@ -9,6 +9,7 @@
             [ring.middleware.session]
             [ring.middleware.session.memory]
             [project1.html :as html]
+            [project1.route :as route]
             [clojure.string]))
 
 (defn layout [contents]
@@ -65,8 +66,7 @@
   (println "Destroying sample webapp!"))
 
 (defn test1-handler [request]
-  (throw (RuntimeException. "error!"))
-  {:body "Test1"})
+  {:body (str "Test1, route args: " (:route-params request))})
 
 (defn test2-handler [request]
   {:status 301
@@ -105,7 +105,19 @@
             [:pre (when-let [f (get-in request [:params :file :tempfile])]
                     (.getAbsolutePath f))]])})
 
-(defn route-handler [request]
+(def route-handler
+  (route/routing
+    (route/with-route-matches :get "/test1"       test1-handler)
+    (route/with-route-matches :get "/test1/:id"   test1-handler)
+    (route/with-route-matches :get "/test2"       test2-handler)
+    (route/with-route-matches :get "/test3"       handlers/handler3)
+    (route/with-route-matches :get "/form"        form-handler)
+    (route/with-route-matches :post "/form"       form-handler)
+    (route/with-route-matches :get "/cookies"     cookie-handler)
+    (route/with-route-matches :get "/session"     session-handler)
+    (route/with-route-matches :get "/logout"      logout-handler)))
+
+(defn route-handler-old [request]
   (condp = (:uri request)
     "/test1"    (test1-handler request)
     "/test2"    (test2-handler request)

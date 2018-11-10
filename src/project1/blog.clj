@@ -1,37 +1,48 @@
 (ns project1.blog
   (:require
     [clojure.data.json :as json]
-    [clojure.walk :as walk]
-    [project1.route :as route]))
-
-(defonce BLOG (atom {}))
-
-(defonce ID (atom 0))
+    [project1.route :as route]
+    [project1.db :as db]
+    [clojure.java.jdbc :as jdbc]
+    [clojure.walk :as walk]))
 
 (defn get-blog-entries []
-  (println "-- get-blog-entries")
-  (sort :id (vals @BLOG)))
+  (jdbc/query db/postgresql-db
+    ["SELECT id, title, body FROM entries"]))
 
 (defn add-blog-entry [entry]
-  (println "-- add-blog-entry")
-  (let [id (swap! ID inc)]
-    (println "-- ID: " ID)
-    (get (swap! BLOG assoc id (assoc entry :id id)) id)))
+  (println "Inserindo " (str entry))
+  (println "Banco" (str db/postgresql-db))
+  (jdbc/db-transaction [database db/postgresql-db]
+    (jdbc/insert! database :entries (select-keys entry [:title :body]))))
+
+;;(defn add-blog-entry [entry]
+;;  (println "Inserindo " (str entry))
+;;    (jdbc/insert! db/postgresql-db :entries (select-keys entry [:title :body])))
 
 (defn get-blog-entry[id]
-  (get @BLOG id))
+  (first (jdbc/query db/postgresql-db
+    ["SELECT id, title, body FROM entries WHERE id=?" id])))
 
 (defn update-blog-entry [id entry]
-  (when (get-blog-entry id)
-    (get (swap! BLOG assoc id entry) id)))
+  (jdbc/db-transaction [database db/postgresql-db]
+    (jdbc/update! database :entries
+      (select-keys entry [:title :body])))
+  (get-blog-entry id))
+
+;;(defn update-blog-entry [id entry]
+;;  (jdbc/db-transaction [database db/postgresql-db]
+;;    (let [merged (merge { :title nil :body nil } entry)]
+;;      (jdbc/update! database :entries (select-keys merged [:title :body]) ["id=?" id])
+;;     (get-blog-entry id))))
 
 (defn alter-blog-entry [id entry-values]
-  (when (get-blog-entry id)
-    (get (swap! BLOG update-in [id] merge entry-values) id)))
+  (update-blog-entry id entry-values))
 
 (defn delete-blog-entry [id]
   (when (get-blog-entry id)
-    (swap! BLOG dissoc id)
+    (jdbc/db-transaction [database db/postgresql-db]
+      (jdbc/delete! database :entries ["id=?" id]))
     {:id id}))
 
 (defn json-response [data]
@@ -48,6 +59,7 @@
     (try 
       (handler request)
       (catch Throwable throwable
+        (.printStackTrace throwable)
         (assoc (json-response {:message (.getMessage throwable)
                                :stacktrace (map str (.getStackTrace throwable))})
             :status 500)))))

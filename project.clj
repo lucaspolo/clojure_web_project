@@ -7,6 +7,8 @@
                  [org.clojure/data.json "0.2.3"]
                  [org.postgresql/postgresql "9.2-1003-jdbc4"]
                  [korma "0.3.0-RC6"]
+                 [com.novemberain/monger "1.7.0"]
+                 [cheshire "5.1.1"]
                  [ring "1.2.0"]]
   :plugins [[lein-ring "0.8.7"]]
   :ring {:handler project1.core/full-handler

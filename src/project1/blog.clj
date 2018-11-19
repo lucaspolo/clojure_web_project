@@ -2,30 +2,35 @@
   (:require
     [clojure.data.json :as json]
     [project1.route :as route]
-    [project1.db :as db]
-    [korma.core :as korma]
+    [monger.core :as mg]
+    [monger.collection :as mc]
+    [monger.json]
+    [cheshire.core]
     [clojure.walk :as walk]))
 
+(mg/connect!)
+(mg/set-db! (mg/get-db "clojure-blog"))
+
 (defn get-blog-entries []
-  (korma/select db/entries))
+  (mc/find-maps "entries"))
 
 (defn add-blog-entry [entry]
-  (korma/insert db/entries (korma/values (select-keys entry [:title :body])))
-  {:message "Inserido"})
+  (let [entry (assoc entry :_id (org.bson.types.ObjectId.))]
+    (mc/insert "entries" entry)
+    entry))
 
 ;;(defn add-blog-entry [entry]
 ;;  (println "Inserindo " (str entry))
 ;;    (jdbc/insert! db/postgresql-db :entries (select-keys entry [:title :body])))
 
 (defn get-blog-entry[id]
-  (first (korma/select db/entries
-                (korma/where {:id id}))))
+  (mc/find-one-as-map "entries" {:_id (org.bson.types.ObjectId. id)}))
 
 (defn update-blog-entry [id entry]
-  (korma/update db/entries
-        (korma/set-fields (select-keys entry [:title :body]))
-        (korma/where {:id id}))
-  (get-blog-entry id))
+  (let [old-entry (get-blog-entry id)
+        new-entry (merge old-entry entry)]
+    (mc/update-by-id "entries" (:_id old-entry) new-entry)
+    new-entry))
 
 ;;(defn update-blog-entry [id entry]
 ;;  (jdbc/db-transaction [database db/postgresql-db]
@@ -37,13 +42,13 @@
   (update-blog-entry id entry-values))
 
 (defn delete-blog-entry [id]
-  (when (get-blog-entry id)
-    (korma/delete db/entries (korma/where {:id id}))
+  (when-let [entry (get-blog-entry id)]
+    (mc/remove-by-id "entries" (:_id entry))
     {:id id}))
 
 (defn json-response [data]
   (when data
-    {:body (json/write-str data)
+    {:body (cheshire.core/generate-string data)
      :headers {"Content-type" "application/json"}}))
 
 (defn json-body [request]
@@ -61,7 +66,7 @@
             :status 500)))))
 
 (defn get-id [request]
-  (Long/parseLong (-> request :route-params :id)))
+  (-> request :route-params :id))
 
 (defn get-handler [request]
   (json-response (get-blog-entries)))

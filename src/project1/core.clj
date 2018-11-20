@@ -8,6 +8,7 @@
             [ring.middleware.cookies]
             [ring.middleware.session]
             [ring.middleware.session.memory]
+            [compojure.core :as compojure]
             [project1.html :as html]
             [project1.route :as route]
             [project1.blog :as blog]
@@ -87,11 +88,11 @@
   {:body "Logged out."
    :session nil})
 
-(defn form-handler [request]
+(defn form-handler [login request]
   {:status 200
    :headers {"Content-type" "text/html"}
-   :cookies {:username (:login (:params request))}
-   :session {:username (:login (:params request))
+   :cookies {:username login}
+   :session {:username login
              :cnt (inc (or (:cnt (:session request)) 0))}
    :body (layout
           [:div
@@ -107,18 +108,17 @@
             [:pre (when-let [f (get-in request [:params :file :tempfile])]
                     (.getAbsolutePath f))]])})
 
-(def route-handler
-  (route/routing
-    blog/blog-handler
-    (route/with-route-matches :get "/test1"       test1-handler)
-    (route/with-route-matches :get "/test1/:id"   test1-handler)
-    (route/with-route-matches :get "/test2"       test2-handler)
-    (route/with-route-matches :get "/test3"       handlers/handler3)
-    (route/with-route-matches :get "/form"        form-handler)
-    (route/with-route-matches :post "/form"       form-handler)
-    (route/with-route-matches :get "/cookies"     cookie-handler)
-    (route/with-route-matches :get "/session"     session-handler)
-    (route/with-route-matches :get "/logout"      logout-handler)))
+(compojure/defroutes route-handler
+  (compojure/context "/entries" []
+      blog/blog-handler)
+    (compojure/GET "/test1"       [:as request]     (test1-handler request))
+    (compojure/GET "/test1/:id"   [id :as request]  (test1-handler request))
+    (compojure/GET "/test2"       [:as request]     (test2-handler request))
+    (compojure/GET "/test3"       [:as request]     (handlers/handler3 request))
+    (compojure/ANY "/form"        [login :as request]     (form-handler login request))
+    (compojure/GET "/cookies"     [:as request]     (cookie-handler request))
+    (compojure/GET "/session"     [:as request]     (session-handler request))
+    (compojure/GET "/logout"      [:as request]     (logout-handler request)))
 
 (defn route-handler-old [request]
   (condp = (:uri request)
